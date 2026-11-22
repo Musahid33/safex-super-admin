@@ -1,6 +1,12 @@
-node_modules/
-.next/
-.turbo/
+/node_modules/
+/.next/
+/out/
+/build/
+/dist/
+/coverage/
+*.tsbuildinfo
 .env*
-.DS_Store
-*.log
+!.env.example
+/freebuff-sites-build/
+/.open-next/
+/.wrangler/
