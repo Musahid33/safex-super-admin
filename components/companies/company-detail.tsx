@@ -892,7 +892,7 @@ export function CompanyDetail({
                         <Badge variant="success">Primary</Badge>
                       </div>
                       <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        Managed SAFEX subdomain · DNS handled automatically
+                        Managed SAFEX subdomain · wildcard DNS required
                       </p>
                     </div>
                   </div>
@@ -949,7 +949,7 @@ export function CompanyDetail({
                         {
                           type: "CNAME",
                           name: company.customDomain?.split(".")[0] ?? "safety",
-                          value: "edge.safex.app",
+                          value: "edge.safex.cc.us",
                         },
                         {
                           type: "TXT",

@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { companies as seedCompanies } from "@/lib/data";
 import type { Company } from "@/lib/types";
+import { TENANT_BASE_DOMAIN } from "@/lib/tenant-domain";
 
 type CompanyStore = {
   companies: Company[];
@@ -21,9 +22,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed: unknown = JSON.parse(saved);
-        // Intentional one-time hydration from browser storage before demo mutations are enabled.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        if (Array.isArray(parsed)) setCompanies(parsed as Company[]);
+        if (Array.isArray(parsed)) {
+          const migrated = (parsed as Company[]).map(company => ({
+            ...company,
+            subdomain: company.subdomain.replace(/\.safex\.app$/i, `.${TENANT_BASE_DOMAIN}`),
+          }));
+          // Intentional one-time hydration from browser storage before demo mutations are enabled.
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setCompanies(migrated);
+        }
       }
     } catch { /* keep the seed data if browser storage is unavailable */ }
     setReady(true);
