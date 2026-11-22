@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/select";
 import { ADDONS, INDUSTRIES, PLAN_LIST } from "@/lib/data";
 import { formatCurrency, passwordChecks, slugify } from "@/lib/format";
+import { TENANT_BASE_DOMAIN, tenantHostname } from "@/lib/tenant-domain";
 import type { BillingCycle, Company, CompanyDraftData, PlanName } from "@/lib/types";
 import { useCompanyStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -185,6 +186,7 @@ export function CreateCompanyWizard() {
   const draftId = searchParams.get("draft");
   const { companies, addCompany, ready } = useCompanyStore();
   const [draftHydrated, setDraftHydrated] = useState(false);
+  const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(draftId);
   const companyId = useRef("");
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<WizardForm>(initialForm);
@@ -211,7 +213,7 @@ export function CreateCompanyWizard() {
           companyEmail: draft.email ?? "",
           companyPhone: draft.phone ?? "",
           industry: draft.industry,
-          subdomain: draft.subdomain.replace(/\.safex\.app$/, ""),
+          subdomain: draft.subdomain.replace(/\.(?:safex\.cc\.us|safex\.app)$/i, ""),
           city,
           address,
           logoColor: draft.logoColor,
@@ -248,6 +250,9 @@ export function CreateCompanyWizard() {
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.adminEmail);
   const companyEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.companyEmail);
+  const subdomainTaken = companies.some(company =>
+    company.id !== currentCompanyId && company.subdomain.toLowerCase() === tenantHostname(form.subdomain).toLowerCase(),
+  );
   const passwordValid = checks.every((check) => check.valid);
   const passwordsMatch = form.password.length > 0 && form.password === form.confirmPassword;
 
@@ -258,9 +263,11 @@ export function CreateCompanyWizard() {
       subdomain:
         form.subdomain.length < 3
           ? "Tenant URL must be at least 3 characters"
-          : !/^[a-z0-9-]+$/.test(form.subdomain)
-            ? "Use lowercase letters, numbers and hyphens only"
-            : "",
+            : !/^[a-z0-9-]+$/.test(form.subdomain)
+              ? "Use lowercase letters, numbers and hyphens only"
+              : subdomainTaken
+                ? "This tenant subdomain is already assigned"
+                : "",
       city: !form.city.trim() ? "Enter the primary operating city" : "",
       companyEmail: !companyEmailValid ? "Enter a valid company email address" : "",
     };
@@ -281,7 +288,7 @@ export function CreateCompanyWizard() {
       storageLimit: form.storageLimit < 1 ? "Storage must be at least 1 GB" : "",
     };
     return { 0: step1, 1: step2, 2: step3, 4: step5 };
-  }, [form, emailValid, companyEmailValid, passwordValid, passwordsMatch]);
+  }, [form, emailValid, companyEmailValid, subdomainTaken, passwordValid, passwordsMatch]);
 
   const currentErrors = stepErrors[step] ?? {};
   const stepValid = Object.values(currentErrors).every((error) => !error);
@@ -294,7 +301,7 @@ export function CreateCompanyWizard() {
   );
   const baseMonthly = form.cycle === "Annual" ? Math.round(plan.priceAnnual / 12) : plan.priceMonthly;
   const monthlyEstimate = baseMonthly + addonMonthly;
-  const tenantUrl = `${form.subdomain || "company"}.safex.app`;
+  const tenantUrl = tenantHostname(form.subdomain || "company");
 
   const goNext = () => {
     if (!stepValid) {
@@ -338,7 +345,10 @@ export function CreateCompanyWizard() {
     }));
 
   const getCompanyId = () => {
-    if (!companyId.current) companyId.current = `cmp_${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2, 11)}`;
+    if (!companyId.current) {
+      companyId.current = `cmp_${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2, 11)}`;
+      setCurrentCompanyId(companyId.current);
+    }
     return companyId.current;
   };
 
@@ -362,7 +372,7 @@ export function CreateCompanyWizard() {
       logoColor: form.logoColor,
       logoFileName: form.logoFileName || undefined,
       industry: form.industry || "Other",
-      subdomain: `${form.subdomain || "company"}.safex.app`,
+      subdomain: tenantHostname(form.subdomain || "company"),
       sslStatus: "Issued",
       admin: { name: form.adminName || "Admin not assigned", designation: form.adminDesignation || "Company Admin", email: form.adminEmail || "", phone: form.adminPhone || "", username: form.adminUsername || "", lastLogin: "Never" },
       plan: form.plan,
@@ -557,7 +567,7 @@ export function CreateCompanyWizard() {
                   <Field
                     label="Tenant subdomain"
                     required
-                    hint="Lowercase letters, numbers and hyphens. This becomes the tenant URL."
+                    hint="Auto-generated from the company name; you can edit it. Wildcard DNS must point to the tenant platform for this URL to resolve."
                     error={attempted ? currentErrors.subdomain : ""}
                   >
                     <div className="flex items-center rounded-lg border border-input bg-background shadow-sm focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-ring/20 dark:bg-card">
@@ -571,7 +581,7 @@ export function CreateCompanyWizard() {
                         className="border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
                       />
                       <span className="shrink-0 border-l border-border px-3 text-[12px] text-muted-foreground">
-                        .safex.app
+                        .{TENANT_BASE_DOMAIN}
                       </span>
                     </div>
                   </Field>

@@ -8,6 +8,7 @@ import type {
   Plan,
   Ticket,
 } from "@/lib/types";
+import { tenantHostname } from "@/lib/tenant-domain";
 
 export const INDUSTRIES = [
   "Manufacturing",
@@ -202,7 +203,7 @@ function buildCompany(seed: Seed, index: number): Company {
     initials,
     logoColor: COLORS[index % COLORS.length],
     industry: seed.industry,
-    subdomain: `${seed.shortName.toLowerCase().replace(/[^a-z0-9]/g, "")}.safex.app`,
+    subdomain: tenantHostname(seed.shortName.toLowerCase().replace(/[^a-z0-9]/g, "")),
     customDomain: seed.customDomain,
     sslStatus: seed.customDomain ? "Active" : "Issued",
     admin: {
