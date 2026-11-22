@@ -1,26 +1,49 @@
 "use client";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { companies as seedCompanies, type Company } from "@/lib/data";
+import { companies as seedCompanies } from "@/lib/data";
+import type { Company } from "@/lib/types";
 
-type Store = { companies: Company[]; addCompany: (company: Company) => void; updateCompany: (id: string, patch: Partial<Company>) => void; removeCompany: (id: string) => void };
-const StoreContext = createContext<Store | null>(null);
+type CompanyStore = {
+  companies: Company[];
+  ready: boolean;
+  addCompany: (company: Company) => void;
+  updateCompany: (id: string, patch: Partial<Company>) => void;
+  removeCompany: (id: string) => void;
+};
+const StoreContext = createContext<CompanyStore | null>(null);
+const STORAGE_KEY = "safex-super-admin-companies-v2";
+
 export function DataProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<Company[]>(seedCompanies);
+  const [companies, setCompanies] = useState<Company[]>(seedCompanies);
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    try { const saved = localStorage.getItem("safex-admin-companies"); if (saved) setItems(JSON.parse(saved)); } catch { /* use demo data if storage is unavailable */ }
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed: unknown = JSON.parse(saved);
+        // Intentional one-time hydration from browser storage before demo mutations are enabled.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (Array.isArray(parsed)) setCompanies(parsed as Company[]);
+      }
+    } catch { /* keep the seed data if browser storage is unavailable */ }
     setReady(true);
   }, []);
-  useEffect(() => { if (ready) localStorage.setItem("safex-admin-companies", JSON.stringify(items)); }, [items, ready]);
-  const value = useMemo<Store>(() => ({ companies: items,
-    addCompany: company => setItems(current => [company, ...current]),
-    updateCompany: (id, patch) => setItems(current => current.map(company => company.id === id ? { ...company, ...patch } : company)),
-    removeCompany: id => setItems(current => current.filter(company => company.id !== id)),
-  }), [items]);
+  useEffect(() => {
+    if (ready) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(companies)); } catch { /* demo mode remains usable without storage */ }
+    }
+  }, [companies, ready]);
+  const value = useMemo<CompanyStore>(() => ({
+    companies,
+    ready,
+    addCompany: company => setCompanies(current => [company, ...current.filter(item => item.id !== company.id)]),
+    updateCompany: (id, patch) => setCompanies(current => current.map(item => item.id === id ? { ...item, ...patch } : item)),
+    removeCompany: id => setCompanies(current => current.filter(item => item.id !== id)),
+  }), [companies, ready]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 export function useCompanyStore() {
   const store = useContext(StoreContext);
-  if (!store) throw new Error("useCompanyStore must be used inside DataProvider");
+  if (!store) throw new Error("useCompanyStore must be used within DataProvider");
   return store;
 }

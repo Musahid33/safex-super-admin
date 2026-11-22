@@ -1,16 +1,16 @@
 # SAFEX Super Admin Control Plane
 
-Internal administration UI for the SAFEX multi-tenant safety management platform. This repository contains only the Super Admin experience; it does not include Company Admin or employee operations portals.
+Internal-only administration UI for the SAFEX multi-tenant safety management platform. This repository contains the Super Admin portal only; Company Admin and employee operations belong to the separate Company Portal.
 
-## Run locally
+## Local development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. Production build: `npm run build`, then `npm start`.
+Open `http://localhost:3000`. Run `npm run typecheck`, `npm run lint` and `npm run build` for validation.
 
-## Demo behavior
+## Demo mode
 
-The interface uses seeded dummy data. Company creation, status changes, add-on selection and deletion are stored in browser `localStorage` so flows can be explored across pages. No API, authentication, tenant provisioning, email delivery, billing or domain/SSL operations are connected. These screens are demonstrations of the internal admin workflow only.
+The experience is frontend-only and uses seeded sample data. Tenant create/publish, drafts, suspend/activate, deletion, plan changes, add-ons, limits and domain details are persisted in browser `localStorage` to demonstrate cross-page flows. No authentication, impersonation session, tenant/database provisioning, billing, email delivery or domain/SSL operations are connected. “Login as Company Admin” is a guarded hand-off to the separate tenant URL; it does not exchange credentials or host the Company Admin portal here.
